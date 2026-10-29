@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0907">
+  <title>Williams Manor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=UnifrakturMaguntia&family=Caveat:wght@500&family=Reenie+Beanie&family=Special+Elite&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+
+  <!-- Tap-to-begin gate: browsers only allow sound after a click or tap -->
+  <section id="screen-gate" class="screen active">
+    <div class="gate-inner">
+      <h1 class="title">Williams Manor</h1>
+      <p class="gate-sub" id="gate-sub">Best played with headphones, in the dark.</p>
+      <button class="btn big" id="gate-btn">Tap to begin</button>
+    </div>
+  </section>
+
+  <!-- Main menu -->
+  <section id="screen-menu" class="screen">
+    <div class="menu-photo">
+      <div class="photo-frame">
+        <img src="assets/melissa.jpg" alt="Melissa Rees" id="menu-photo">
+        <canvas class="grain" id="menu-grain"></canvas>
+        <div class="photo-flicker"></div>
+      </div>
+    </div>
+    <div class="menu-side">
+      <h1 class="title">Williams Manor</h1>
+      <div class="menu-buttons">
+        <button class="btn" data-go="host">Host Game</button>
+        <button class="btn" data-go="join">Join Game</button>
+        <button class="btn ghost" data-modal="howto">How to Play</button>
+        <button class="btn ghost" data-modal="settings">Settings</button>
+        <button class="btn ghost" data-modal="credits">Credits</button>
+        <button class="btn ghost mobile-only" data-modal="clipping">Read the newspaper</button>
+      </div>
+      <button class="clipping-thumb" id="clipping-thumb" aria-label="Read the newspaper clipping">
+        <div class="clipping small" id="clipping-small"></div>
+        <span class="clip-hint">Tap to read</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Host a game -->
+  <section id="screen-host" class="screen panel-screen">
+    <div class="panel">
+      <button class="back" data-go="menu">← Back</button>
+      <h2>Host a game</h2>
+      <div class="profile" data-profile></div>
+      <label class="field"><span>Room name</span><input id="host-room-name" maxlength="24" placeholder="e.g. 9B Investigators"></label>
+      <label class="field"><span>Password (optional)</span><input id="host-password" maxlength="24" autocomplete="off"></label>
+      <div class="settings-grid" id="host-settings"></div>
+      <p class="error" id="host-error"></p>
+      <button class="btn big" id="host-create">Create room</button>
+    </div>
+  </section>
+
+  <!-- Join a game -->
+  <section id="screen-join" class="screen panel-screen">
+    <div class="panel wide">
+      <button class="back" data-go="menu">← Back</button>
+      <h2>Join a game</h2>
+      <div class="profile" data-profile></div>
+      <div class="join-code">
+        <label class="field inline"><span>Room code</span><input id="join-code" maxlength="4" autocomplete="off" placeholder="ABCD"></label>
+        <button class="btn" id="join-code-btn">Join</button>
+      </div>
+      <div class="browser-head"><h3>Open rooms</h3><button class="btn ghost small" id="browser-refresh">Refresh</button></div>
+      <div class="room-browser" id="room-browser"><p class="muted">Looking for rooms…</p></div>
+      <p class="error" id="join-error"></p>
+    </div>
+  </section>
+
+  <!-- Lobby -->
+  <section id="screen-lobby" class="screen panel-screen">
+    <div class="panel wide lobby">
+      <div class="lobby-head">
+        <div>
+          <h2 id="lobby-name">Room</h2>
+          <p class="muted">Room code <span class="code" id="lobby-code">----</span> <span id="lobby-lock"></span></p>
+        </div>
+        <button class="btn ghost small" id="lobby-leave">Leave</button>
+      </div>
+      <div class="lobby-cols">
+        <div>
+          <h3>Investigators <span class="muted" id="lobby-count"></span></h3>
+          <ul class="player-list" id="lobby-players"></ul>
+          <div class="profile" data-profile data-live></div>
+        </div>
+        <div>
+          <h3>Settings <span class="muted" id="lobby-settings-note"></span></h3>
+          <div class="settings-grid" id="lobby-settings"></div>
+        </div>
+      </div>
+      <div class="lobby-chat">
+        <div class="chat-log" id="lobby-chat-log"></div>
+        <form id="lobby-chat-form"><input id="lobby-chat-input" maxlength="160" placeholder="Say something…" autocomplete="off"></form>
+      </div>
+      <div class="lobby-actions">
+        <button class="btn" id="lobby-ready">I'm ready</button>
+        <button class="btn big" id="lobby-start">Start game</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Intro and controls card -->
+  <section id="screen-intro" class="screen">
+    <div class="intro-lines" id="intro-lines"></div>
+    <button class="btn ghost small skip" id="intro-skip">Skip intro</button>
+    <div class="controls-card hidden" id="controls-card">
+      <h2>Controls</h2>
+      <div class="tabs"><button data-tab="keys">Keyboard</button><button data-tab="touch">Touch</button></div>
+      <div class="controls-table" id="controls-table"></div>
+      <button class="btn big" id="enter-house" disabled>Enter the house</button>
+      <p class="muted small" id="enter-note"></p>
+    </div>
+  </section>
+
+  <!-- The game -->
+  <section id="screen-game" class="screen">
+    <canvas id="game-canvas"></canvas>
+    <div class="hud">
+      <div class="hud-top">
+        <div class="timer" id="hud-timer">20:00</div>
+        <div class="area-name" id="hud-area"></div>
+      </div>
+      <div class="note-count" id="hud-notes"></div>
+      <div class="scribble-big" id="scribble-big"></div>
+      <div class="crosshair" id="crosshair"></div>
+      <div class="prompt" id="hud-prompt"></div>
+      <div class="hold-ring" id="hold-ring"></div>
+      <div class="captions" id="hud-captions"></div>
+      <div class="bars">
+        <div class="bar stamina" id="bar-stamina"><i></i></div>
+        <div class="bar battery hidden" id="bar-battery"><span>🔋</span><i></i></div>
+      </div>
+      <div class="chat" id="hud-chat">
+        <div class="chat-log" id="game-chat-log"></div>
+        <form id="game-chat-form" class="hidden"><input id="game-chat-input" maxlength="160" placeholder="Chat (Enter to send, Esc to close)" autocomplete="off"></form>
+      </div>
+      <div class="ping-wheel hidden" id="ping-wheel">
+        <button data-ping="0"><b>1</b> Over here</button>
+        <button data-ping="1"><b>2</b> Found a note</button>
+        <button data-ping="2"><b>3</b> Need a second player</button>
+        <button data-ping="3"><b>4</b> Something's wrong</button>
+      </div>
+      <div class="click-to-play hidden" id="click-to-play">Click to look around</div>
+      <div class="blackfade" id="blackfade"></div>
+    </div>
+    <div class="touch-ui hidden" id="touch-ui">
+      <div class="joy-zone" id="joy-zone"><div class="joy-base" id="joy-base"><div class="joy-knob" id="joy-knob"></div></div></div>
+      <div class="look-zone" id="look-zone"></div>
+      <div class="touch-buttons">
+        <button id="t-interact" class="t-btn big" aria-label="Interact">✋</button>
+        <button id="t-torch" class="t-btn" aria-label="Flashlight">🔦</button>
+        <button id="t-journal" class="t-btn" aria-label="Journal">📖</button>
+        <button id="t-chat" class="t-btn" aria-label="Chat">💬</button>
+        <button id="t-ping" class="t-btn" aria-label="Ping">📍</button>
+      </div>
+      <button id="t-pause" class="t-btn pause" aria-label="Pause">⏸</button>
+    </div>
+    <div class="rotate-prompt hidden" id="rotate-prompt"><div>⟳</div><p>Turn your phone sideways to play.</p></div>
+  </section>
+
+  <!-- Deduction: the shared evidence board -->
+  <section id="screen-deduction" class="screen board-screen">
+    <header class="board-head">
+      <div>
+        <h2>The evidence board</h2>
+        <p class="muted small">Drag the notes into the order they were written. Tap a note to read it.</p>
+      </div>
+      <div class="board-status">
+        <div class="timer" id="board-timer"></div>
+        <div class="muted small" id="board-attempts"></div>
+      </div>
+    </header>
+    <div class="board-banner hidden" id="board-banner"></div>
+    <div class="board" id="board"></div>
+    <footer class="board-foot">
+      <div class="board-chat">
+        <div class="chat-log" id="board-chat-log"></div>
+        <form id="board-chat-form"><input id="board-chat-input" maxlength="160" placeholder="Discuss the order…" autocomplete="off"></form>
+      </div>
+      <div class="board-actions">
+        <button class="btn ghost" id="board-ledger" title="Steven's ledger">📒 Ledger</button>
+        <button class="btn" id="board-propose">Propose this order</button>
+        <button class="btn big" id="board-lockin">Lock in</button>
+      </div>
+    </footer>
+  </section>
+
+  <!-- Ending sequence, then the results -->
+  <section id="screen-ending" class="screen">
+    <div class="ending-stage" id="ending-stage"></div>
+    <button class="btn ghost small skip" id="ending-skip">Skip</button>
+  </section>
+
+  <section id="screen-results" class="screen panel-screen">
+    <div class="panel wide results" id="results"></div>
+  </section>
+
+  <!-- Modal for How to Play, Settings, Credits, the clipping, the journal and the pause menu -->
+  <div class="modal hidden" id="modal">
+    <div class="modal-box" id="modal-box">
+      <button class="modal-x" id="modal-x" aria-label="Close">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

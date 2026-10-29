@@ -1,0 +1,13 @@
+# Render blueprint: one free web service running every room in memory.
+# In Render: New > Blueprint, pick this repo. Or create a Web Service by hand with the same commands.
+services:
+  - type: web
+    name: williams-manor
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
