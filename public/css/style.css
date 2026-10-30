@@ -330,19 +330,26 @@ mark.tell { background: rgba(178,58,46,0.45); color: inherit; padding: 0 2px; bo
 .puzzle { text-align: center; }
 .puzzle h2 { margin-bottom: 0.3rem; }
 .puzzle .muted { margin-top: 0; }
-.slider { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; width: min(78vw, 300px, 52vh); aspect-ratio: 3 / 4; margin: 0.8rem auto; background: #120c07; padding: 3px; border: 6px solid #8a6a2a; }
-.slider .tile { border: 0; padding: 0; cursor: pointer; background-image: url(../assets/portraits/steven_iii.jpg); background-size: 300% 300%; filter: sepia(0.5) contrast(1.05); transition: filter 0.15s; }
-.slider .tile:hover { filter: sepia(0.2) brightness(1.15); }
-.slider .gap { background: #000; }
-.fuse-wrap { display: flex; align-items: center; justify-content: center; gap: 0.4rem; margin: 0.8rem 0; }
-.fuse { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; width: min(72vw, 300px, 56vh); background: #1a1a1a; padding: 6px; border: 4px solid #444; border-radius: 4px; }
+.spot-pic { position: relative; width: min(78vw, 330px, 54vh); aspect-ratio: 800 / 1066; margin: 0.8rem auto; border: 8px solid #8a6a2a; box-shadow: inset 0 0 0 2px #3a2810, 0 0 18px #000; background: url(../assets/portraits/steven_iii.jpg) center / cover; filter: sepia(0.55) contrast(1.05); cursor: crosshair; touch-action: none; overflow: hidden; --lx: 50%; --ly: 40%; }
+.spot-dark { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at var(--lx) var(--ly), rgba(0,0,0,0) 0, rgba(0,0,0,0.05) 34px, rgba(0,0,0,0.82) 78px); }
+.spot-clue { position: absolute; width: 9%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0.8; }
+.spot-clue .slit { stroke: #120b05; stroke-width: 1.6; fill: none; }
+.spot-clue .paper { fill: #cdbf9c; stroke: #6a5a3a; stroke-width: 0.6; }
+.spot-clue .ink { stroke: #2a1a0a; stroke-width: 0.8; fill: none; }
+.spot-pic.found .spot-dark { background: rgba(0,0,0,0.2); transition: background 0.6s; }
+.spot-pic.found .spot-clue { opacity: 1; filter: drop-shadow(0 0 3px #f2c14e) drop-shadow(0 0 8px #f2c14e); }
+.fuse-wrap { display: flex; justify-content: center; margin: 0.8rem 0 0.3rem; }
+.fuse { display: grid; grid-template-columns: 0.9fr repeat(4, 1fr) 0.9fr; grid-template-rows: repeat(4, auto); gap: 4px; width: min(88vw, 380px, 66vh); background: #1a1a1a; padding: 6px; border: 4px solid #444; border-radius: 4px; }
 .ftile { aspect-ratio: 1; background: #2a2622; border: 1px solid #3a3530; border-radius: 3px; padding: 0; cursor: pointer; }
 .ftile svg { width: 100%; height: 100%; display: block; }
 .ftile polyline, .ftile circle { stroke: #6a5a40; stroke-width: 14; fill: #6a5a40; stroke-linecap: round; }
 .ftile.on polyline, .ftile.on circle { stroke: #f2c14e; fill: #f2c14e; filter: drop-shadow(0 0 4px #f2c14e); }
-.fuse-end { font-size: 1.6rem; }
-.fuse-end.in { margin-top: -25%; }
-.fuse-end.out { margin-top: 25%; }
+.fuse-term { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #5a5040; border-radius: 4px; color: #8a7a60; font-size: 1.3rem; line-height: 1; }
+.fuse-term small { font: 0.55rem/1.2 var(--type, monospace); letter-spacing: 0.04em; margin-top: 0.25rem; }
+.fuse-term.in { border-right: 0; border-radius: 4px 0 0 4px; }
+.fuse-term.out { border-left: 0; border-radius: 0 4px 4px 0; }
+.fuse-term.on { border-color: #f2c14e; color: #f2c14e; box-shadow: 0 0 8px rgba(242,193,78,0.5); }
+.fuse-status { min-height: 1.2em; font-size: 0.9rem; color: #c8b890; margin: 0.2rem 0 0; }
 .clockface { width: min(70vw, 260px, 48vh); touch-action: none; cursor: grab; margin: 0.6rem auto; display: block; }
 .clockface .rim { fill: #4a2e14; }
 .clockface .dial { fill: #e4d8b8; }

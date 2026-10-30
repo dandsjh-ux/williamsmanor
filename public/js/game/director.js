@@ -14,6 +14,7 @@ const fx = [];       // light effects: { area ('*' = everywhere), until, kind: '
 const lastMult = {};
 let flickerVal = {}, flickerNext = 0;
 let shadow = null, whisper = null;
+let cellarWhisperAt = -Infinity; // the Cellar whispers as you come down, at most every 30 s
 
 export function initDirector(hooks) {
   H = hooks;
@@ -35,6 +36,7 @@ export function resetDirector() {
   for (const id of Object.keys(AREAS)) { setAreaLight(id, 1); lastMult[id] = 1; }
   if (shadow) shadow.group.visible = false;
   stopWhisper();
+  cellarWhisperAt = -Infinity;
 }
 
 // ---------------------------------------------------------------------------- Captions
@@ -127,8 +129,13 @@ export function onDirectorEvent(e) {
   }
 }
 
-/** Sometimes the lamps stutter as you walk into a room (only you see it). */
+/** Sometimes the lamps stutter as you walk into a room (only you see it). The Cellar always whispers. */
 export function enteredRoom(area) {
+  if (area === 'cellar' && performance.now() - cellarWhisperAt > 30000 && !H.inOverlay()) {
+    cellarWhisperAt = performance.now();
+    startWhisper();
+    cap('[Whispering in the dark below]');
+  }
   if (!AREAS[area]?.lamp || Math.random() > 0.25) return;
   fx.push({ area, until: performance.now() + 500 + Math.random() * 700, kind: 'flicker' });
   audio.play('flicker', { at: v3(AREAS[area].lamp), scene: H.scene, volume: 0.35, refDistance: 2 });

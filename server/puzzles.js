@@ -8,28 +8,12 @@ const WHITE_ROSE = 7;      // index of the white bush among the 9 rose bushes
 const LATCH_MS = 10000;    // the dumbwaiter latch holds this long
 const rand = (n) => Math.floor(Math.random() * n);
 
-// ---------------------------------------------------------------- Portrait slider (3x3)
-// tiles[pos] = which piece sits there; piece 8 is the gap.
+// ---------------------------------------------------------------- Father's portrait: spot the hidden clue
+// A corner of paper pokes out of a slit in the canvas at one of these places (fractions of
+// the photograph's width and height, chosen away from the faces). Click it to find the note.
 
-function adjacent(a, b) {
-  const [ar, ac, br, bc] = [Math.floor(a / 3), a % 3, Math.floor(b / 3), b % 3];
-  return Math.abs(ar - br) + Math.abs(ac - bc) === 1;
-}
-
-function scrambleSlider() {
-  for (;;) {
-    const t = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-    let gap = 8, prev = -1;
-    for (let i = 0; i < 160; i++) {
-      const opts = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter((p) => adjacent(p, gap) && p !== prev);
-      const p = opts[rand(opts.length)];
-      [t[gap], t[p]] = [t[p], t[gap]];
-      prev = gap;
-      gap = p;
-    }
-    if (t.filter((v, i) => v === i).length < 4) return t;
-  }
-}
+const PORTRAIT_SPOTS = [[0.36, 0.17], [0.06, 0.4], [0.08, 0.9], [0.9, 0.12], [0.93, 0.6], [0.6, 0.93]];
+const PORTRAIT_REACH = 0.06; // how close a click must land, as a fraction of the width
 
 // ---------------------------------------------------------------- Fuse box (4x4 wire tiles)
 // Directions as bits: N=1 E=2 S=4 W=8. Power enters tile 4 from the west and must leave tile 11 to the east.
@@ -77,7 +61,7 @@ function newFuse() {
 
 export function newPuzzles() {
   return {
-    portrait: { solved: false, tiles: scrambleSlider() },
+    portrait: { solved: false, spot: PORTRAIT_SPOTS[rand(PORTRAIT_SPOTS.length)] },
     dumbwaiter: { solved: false, raised: false, latchedUntil: 0 },
     fuse: { solved: false, ...newFuse() },
     floorboard: { solved: false, which: rand(6) },
@@ -110,12 +94,10 @@ export function applyAction(puzzles, id, action, data = {}) {
 
   switch (id) {
     case 'portrait': {
-      if (action !== 'slide' || !int(data.pos, 0, 8)) break;
-      const gap = s.tiles.indexOf(8);
-      if (!adjacent(gap, data.pos)) break;
-      [s.tiles[gap], s.tiles[data.pos]] = [s.tiles[data.pos], s.tiles[gap]];
-      changed = true;
-      solved = s.tiles.every((v, i) => v === i);
+      if (action !== 'search' || !Number.isFinite(data.x) || !Number.isFinite(data.y)) break;
+      // y is scaled by the photograph's aspect (800 x 1066) so the reach is a circle.
+      if (Math.hypot(data.x - s.spot[0], (data.y - s.spot[1]) * 1.33) <= PORTRAIT_REACH) solved = changed = true;
+      else msg = ['Only paint and dust.', 'The canvas is flat here.', 'Nothing but cracked varnish.'][rand(3)];
       break;
     }
     case 'dumbwaiter': {

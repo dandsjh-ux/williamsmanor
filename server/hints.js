@@ -6,7 +6,7 @@ const HINTS = {
   2: ['A note is pinned up in the Bird Room.', 'Look on the Bird Room wall beside the scratches, near the bed.'],
   3: ['Her white dress is still in the Master Bedroom.', 'Check the pocket of the white dress by the wardrobe in the Master Bedroom.'],
   4: ['The music box in the Nursery is hiding something.', 'Lift the music box on the little table in the Nursery.'],
-  5: ["Father's portrait in the Drawing Room has been cut into pieces.", "Slide the pieces of Father's portrait back together. The note is behind the frame."],
+  5: ["Father's portrait in the Drawing Room is hiding something.", "Examine Father's portrait and sweep the light over it. Click where a corner of paper pokes out of the canvas."],
   6: ['The dumbwaiter between the Kitchen and the Dining Room still works.', 'Hold the crank in the Kitchen, set the latch, then open the Dining Room hatch within 10 seconds.'],
   7: ['The Conservatory has no power. The fuse box is in the Cellar.', 'Turn the wire pieces in the Cellar fuse box until power flows across, then check the Conservatory bench.'],
   8: ['One floorboard in the Bird Room is loose.', 'Walk slowly over the Bird Room boards near the bed. Pry up the one that knocks hollow.'],

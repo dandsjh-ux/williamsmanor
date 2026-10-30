@@ -520,11 +520,11 @@ class Door {
     if (axis === 'x') {
       this.pivot.position.set(x - width / 2, L, z);
       leaf.position.set(width / 2, DOOR_H / 2, 0);
-      knob.position.set(width - 0.15, DOOR_H / 2 - 0.1, 0.06);
+      knob.position.set(width / 2 - 0.15, -0.1, 0.06); // relative to the leaf's centre, near the latch edge
     } else {
       this.pivot.position.set(x, L, z - width / 2);
       leaf.position.set(0, DOOR_H / 2, width / 2);
-      knob.position.set(0.06, DOOR_H / 2 - 0.1, width - 0.15);
+      knob.position.set(0.06, -0.1, width / 2 - 0.15);
     }
     leaf.add(knob);
     const knob2 = knob.clone();

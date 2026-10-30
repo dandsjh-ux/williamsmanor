@@ -19,7 +19,7 @@ import { noteById, NOTES } from '../data/notes.js';
 const PINGS = ['Over here', 'Found a note', 'Need a second player', "Something's wrong"];
 const WALK = 2.6, JOG = 4.3, STAMINA = 4, BATTERY_SEC = 240;
 
-let renderer, scene, camera, flashlight, roomLight, hemi, team, grain, built = false;
+let renderer, scene, camera, flashlight, roomLights, hemi, team, grain, built = false;
 let running = false, lastT = 0, sendAcc = 0;
 let room = null, selfId = null, isHost = false;
 let timerAt = 0;
@@ -56,11 +56,15 @@ function init() {
   scene.add(camera);
 
   // Barely any light to see by: a whisper of moonlight everywhere, and a pool of lamplight
-  // around the lamp of whichever room you are in.
+  // around the lamp of whichever room you are in. Two lamp lights cross-fade as you walk
+  // between rooms, so the room behind you dims instead of snapping off.
   hemi = new THREE.HemisphereLight(0x4a5670, 0x0c0806, 0.07);
   scene.add(hemi);
-  roomLight = new THREE.PointLight(0xffb070, 0, 12, 2);
-  scene.add(roomLight);
+  roomLights = [0, 1].map(() => {
+    const light = new THREE.PointLight(0xffb070, 0, 12, 2);
+    scene.add(light);
+    return { light, area: null, fade: 0, base: 0 };
+  });
 
   flashlight = new THREE.SpotLight(0xfff1d6, 0, 22, 0.5, 0.62, 1.5);
   flashlight.position.set(0.18, -0.22, 0.05);
@@ -87,7 +91,7 @@ function init() {
     camera: () => camera.position,
     forward: (v) => camera.getWorldDirection(v),
     me: () => me,
-    flashOn: () => me.flash,
+    flashOn: () => me.flash && !gardenDark.until,
     inOverlay: () => modalOpen(),
   });
   team = new Teammates(scene, high ? 7 : 3);
@@ -218,6 +222,8 @@ export function stopGame() {
   toggleWheel(false);
   if (modalOpen()) closeModal();
   tickSound?.stop(0.5);
+  endGardenDark();
+  gardenDark.next = 0;
   team?.clear();
   for (const p of pingMarkers.splice(0)) scene.remove(p.obj);
   if (document.pointerLockElement) document.exitPointerLock();
@@ -329,14 +335,16 @@ function update(dt) {
     me.battery = Math.max(0, me.battery - dt / BATTERY_SEC);
     if (me.battery <= 0) { me.flash = false; caption('[Your flashlight dies]'); }
   }
-  flashlight.intensity = me.flash ? 34 * (me.battery < 0.1 && room?.settings.batteryDrain ? 0.4 + Math.random() * 0.6 : 1) : 0;
 
   // Room
   const area = areaAtPos(me);
   if (area !== me.area) { me.area = area; showArea(area); enteredRoom(area); }
+  const dying = gardenFlashlight(area === 'garden');
+  const lit = me.flash && dying > 0;
+  flashlight.intensity = lit ? 34 * dying * (me.battery < 0.1 && room?.settings.batteryDrain ? 0.4 + Math.random() * 0.6 : 1) : 0;
   const a = AREAS[area];
   const bright = areaBrightness(area);
-  if (a.lamp && bright > 0.02) { roomLight.position.set(...a.lamp); roomLight.intensity = bright * (a.chandelier ? 40 : 16); } else roomLight.intensity = 0;
+  updateRoomLights(area, a.lamp && bright > 0.02 ? bright * (a.chandelier ? 40 : 16) : 0, dt);
   const outside = !!a.outside;
   scene.fog.color.setHex(outside ? 0x05070c : 0x000000);
   scene.fog.density += ((outside ? 0.075 : 0.055) - scene.fog.density) * Math.min(1, dt * 2);
@@ -346,9 +354,9 @@ function update(dt) {
   updateHouse(dt, area === 'staircase' || area === 'foyer');
   team.update(camera.position, dt);
   updateFocus();
-  const seen = updateScribbles(dt, camera.position, fwd, me.flash && input.enabled);
+  const seen = updateScribbles(dt, camera.position, fwd, lit && input.enabled);
   if (seen && input.enabled) showScribble(seen);
-  updatePuzzles(dt, { me, cam: camera.position, fwd, flashOn: me.flash, hints: room?.settings.whisperHints });
+  updatePuzzles(dt, { me, cam: camera.position, fwd, flashOn: lit, hints: room?.settings.whisperHints });
   updateDirector(dt);
   updateHold(dt);
   updatePings(dt);
@@ -358,8 +366,62 @@ function update(dt) {
   sendAcc += dt;
   if (sendAcc >= 0.1) {
     sendAcc = 0;
-    send('player:move', [me.x, me.y, me.z, me.yaw, me.pitch, me.flash, me.area, modalOpen() || chatOpen]);
+    send('player:move', [me.x, me.y, me.z, me.yaw, me.pitch, lit, me.area, modalOpen() || chatOpen]);
   }
+}
+
+// ---------------------------------------------------------------------------- Lamplight
+
+// roomLights[0] lights the room you are in; [1] is the room you just left, fading out.
+// Flickers and power cuts still change the current lamp instantly.
+function updateRoomLights(area, want, dt) {
+  if (roomLights[0].area !== area) {
+    roomLights.reverse();
+    const [cur, prev] = roomLights;
+    prev.base = prev.light.intensity;
+    prev.fade = 1;
+    if (cur.area !== area) {
+      cur.area = area;
+      cur.fade = 0;
+      if (AREAS[area]?.lamp) cur.light.position.set(...AREAS[area].lamp);
+    }
+  }
+  const [cur, prev] = roomLights;
+  cur.fade = Math.min(1, cur.fade + dt * 3);
+  cur.light.intensity = want * cur.fade;
+  prev.fade = Math.max(0, prev.fade - dt * 3);
+  prev.light.intensity = prev.base * prev.fade;
+}
+
+// ---------------------------------------------------------------------------- The garden takes your light
+
+// Out in the Garden the flashlight now and then dies for 3-5 seconds while your heart pounds.
+// Returns the beam's multiplier: 1 normally, a stutter as it dies, 0 while it is out.
+const gardenDark = { next: 0, start: 0, until: 0, hb: null };
+function gardenFlashlight(inGarden) {
+  const g = gardenDark, now = performance.now();
+  if (g.until) {
+    if (inGarden && now < g.until) return now - g.start < 450 ? (Math.random() < 0.5 ? 0 : 0.3 + Math.random() * 0.7) : 0;
+    endGardenDark();
+    if (me.flash) audio.play('flashlight_click', { volume: 0.6 });
+    return 1;
+  }
+  if (!inGarden) { g.next = 0; return 1; }
+  if (!g.next) g.next = now + 8000 + Math.random() * 12000;
+  if (now < g.next || !me.flash) return 1;
+  g.start = now;
+  g.until = now + 3000 + Math.random() * 2000;
+  g.hb = audio.play('heartbeat', { loop: true, volume: 0.9, fadeIn: 0.3 });
+  audio.play('flicker', { volume: 0.45, rate: 1.2 });
+  caption('[Your flashlight dies. Your heart pounds.]', 3500);
+  return 0.5;
+}
+function endGardenDark() {
+  const g = gardenDark;
+  g.hb?.stop(1.2);
+  g.hb = null;
+  g.until = 0;
+  g.next = performance.now() + 15000 + Math.random() * 25000;
 }
 
 // ---------------------------------------------------------------------------- Footsteps

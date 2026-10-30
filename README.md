@@ -26,9 +26,9 @@ Then open http://localhost:3000. To test multiplayer on one computer, open a sec
 | Note | Puzzle | Where |
 |---|---|---|
 | 1–4 | Free finds | Umbrella stand, beside the Bird Room scratches, the white dress pocket, under the music box |
-| 5 | 3×3 portrait slider | Drawing Room, Father's portrait |
+| 5 | Spot the hidden clue: click the paper poking out of Father's portrait | Drawing Room, Father's portrait |
 | 6 | Dumbwaiter: hold the crank, set the latch, reach the Dining hatch in 10 s | Kitchen → Dining Room |
-| 7 | Fuse box wire tiles; powers the Conservatory | Cellar |
+| 7 | Fuse box wire tiles from MAINS to CONSERVATORY; powers the Conservatory | Cellar |
 | 8 | Hollow floorboard (listen for it), then pry it up | Bird Room |
 | 9 | The photograph whose eyes follow your flashlight (Steven I or II) | Portrait Hall |
 | 10 | Set the grandfather clock to 12:00; a stair tread opens | Foyer → Grand Staircase |
@@ -37,7 +37,9 @@ Then open http://localhost:3000. To test multiplayer on one computer, open a sec
 | — | Brass lock, code 37: opens Steven's ledger | Study |
 | — | Wipe the fogged mirror | Bathroom |
 
-Which floorboard, portrait and drawer is the right one changes every game.
+Which floorboard, portrait and drawer is the right one, and where the paper hides in Father's portrait, changes every game.
+
+The Cellar whispers whenever someone comes down into it, and out in the Garden your flashlight dies now and then for 3–5 seconds while your heart pounds.
 
 ### Where every note is (spoilers)
 
@@ -47,9 +49,9 @@ Which floorboard, portrait and drawer is the right one changes every game.
 | 2 | Bird Room (upstairs) | Read the note pinned to the east wall beside the scratches, near the bed. |
 | 3 | Master Bedroom (upstairs) | Check the pocket of the white dress by the wardrobe. |
 | 4 | Nursery (upstairs) | Lift the music box on the little table. |
-| 5 | Drawing Room | Examine Father's portrait over the fireplace and solve the 3×3 slider. The portrait slides aside and the note is behind it. |
+| 5 | Drawing Room | Examine Father's portrait over the fireplace. Sweep the pool of light over the painting and click the corner of paper poking out of a cut in the canvas (its place changes every game). The portrait slides aside and the note is behind it. |
 | 6 | Kitchen → Dining Room | Hold the crank in the Kitchen until the dumbwaiter is up, set the latch, then open the Dining Room hatch within 10 seconds. Easier with two: one cranks, one waits at the hatch. |
-| 7 | Cellar → Conservatory | Needs the Cellar open (note 11's key). Turn the wire tiles in the Cellar fuse box until power flows from the left side to the right. The Conservatory lights come on and the note is on the low bench. |
+| 7 | Cellar → Conservatory | Needs the Cellar open (note 11's key). Turn the wire tiles in the Cellar fuse box until power flows from the MAINS terminal (second row, left) to the CONSERVATORY terminal (third row, right). Lit wire carries power. The Conservatory lights come on and the note is on the low bench. |
 | 8 | Bird Room (upstairs) | Walk slowly over the boards near the bed. One knocks hollow underfoot; hold Interact on it to pry it up. |
 | 9 | Portrait Hall (upstairs) | Shine your torch on the photographs of Steven Williams I and II. Examine the one whose eyes follow you; it swings aside and the note is behind it. |
 | 10 | Foyer → Grand Staircase | Set the grandfather clock in the Foyer to 12:00. A tread halfway up the staircase opens. |

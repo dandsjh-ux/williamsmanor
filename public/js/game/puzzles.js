@@ -23,9 +23,9 @@ const ROOM_PUZZLES = {
   bird: ['floorboard'], hall: ['eyes'], foyer: ['clock'], staircase: ['clock'], garden: ['roseDig'], study: ['studyLock'], bathroom: ['mirror'],
 };
 const HINTS = {
-  portrait: ['Father watches over the fireplace… but his face is all in pieces.', 'Put Father back together. Something is tucked behind his frame.'],
+  portrait: ['Father watches over the fireplace… and he is hiding something.', 'Look closely at his portrait. A corner of paper pokes out of the canvas.'],
   dumbwaiter: ['The little lift between the Kitchen and the Dining Room still works.', 'Crank it up, set the latch, then run to the Dining Room hatch. Two can do it faster.'],
-  fuse: ['The Conservatory has no power. The fuse box is in the Cellar.', 'Turn the wire pieces until power runs from one side to the other.'],
+  fuse: ['The Conservatory has no power. The fuse box is in the Cellar.', 'Turn the wire pieces until power runs from the MAINS to the CONSERVATORY terminal.'],
   floorboard: ['She hid something under the floor, near the bed.', 'Walk slowly over the boards. Listen for one that sounds hollow.'],
   eyes: ['One of the old photographs is watching you.', 'Shine your light on each face in the Portrait Hall. Whose eyes follow you?'],
   clock: ["Father's clock knows the way down.", 'Twelve, twelve, twelve. Set both hands to midnight.'],
@@ -86,10 +86,10 @@ export function buildPuzzles(hooks) {
   H = hooks;
   const scene = H.scene;
 
-  // 1. Father's portrait: a 3x3 slider; the note is behind the frame.
+  // 1. Father's portrait: spot the paper hidden in the canvas; the note is behind the frame.
   const father = anchors.portraits.father;
   props.father = father;
-  add({ mesh: father, prompt: () => (solved('portrait') ? null : "Examine Father's portrait"), use: openSlider });
+  add({ mesh: father, prompt: () => (solved('portrait') ? null : "Examine Father's portrait"), use: openPortrait });
 
   // 2. Dumbwaiter: crank and latch in the Kitchen, hatch in the Dining Room.
   const metal = new THREE.MeshLambertMaterial({ color: 0x3a3a3a });
@@ -254,7 +254,11 @@ export function onPuzzleSolved({ id, by, byId }) {
   const mine = byId === H.selfId();
   const names = { portrait: "Father's portrait", dumbwaiter: 'the dumbwaiter', fuse: 'the fuse box', floorboard: 'the loose floorboard', eyes: 'the watching portrait', clock: 'the grandfather clock', cellarKey: 'the cellar key', roseDig: 'the white rose', studyLock: 'the brass lock', mirror: 'the mirror' };
   H.caption(`[${mine ? 'You' : by} solved ${names[id]}]`, 4000);
-  if (openId === id) setTimeout(() => openId === id && closeModal(), 1200);
+  if (openId === id) setTimeout(() => openId === id && closeModal(), id === 'portrait' || id === 'fuse' ? 2500 : 1200);
+  if (id === 'fuse') {
+    H.caption('[The fuse box hums. Power runs up through the walls to the Conservatory.]', 5000);
+    audio.play('flicker', { volume: 0.5, rate: 0.9 });
+  }
   if (id === 'clock') audio.play('clock_chime', { at: anchors.clock, scene: H.scene, volume: 1, refDistance: 3 });
   else if (id !== 'mirror') audio.play('lock_open', { volume: 0.7 });
 }
@@ -492,35 +496,56 @@ function puffDust(pos) {
 // ---------------------------------------------------------------------------- Overlays
 
 function rerender(id) {
-  ({ portrait: renderSlider, fuse: renderFuse, clock: renderClock })[id]?.();
+  ({ fuse: renderFuse, clock: renderClock })[id]?.();
 }
 
-// Portrait slider
-function openSlider() {
-  overlay('portrait', `<h2>Father's portrait</h2><p class="muted">The painting has been cut into pieces. Slide them back into place.</p><div class="slider" id="pz-slider"></div>`);
-  renderSlider();
-}
-function renderSlider() {
-  const el = document.getElementById('pz-slider');
-  if (!el) return;
-  const s = P.portrait;
-  el.innerHTML = s.tiles.map((v, pos) => (v === 8 && !s.solved
-    ? `<div class="tile gap"></div>`
-    : `<button class="tile" data-pos="${pos}" style="background-position:${(v % 3) * 50}% ${Math.floor(v / 3) * 50}%"></button>`)).join('');
-  for (const b of el.querySelectorAll('[data-pos]')) b.onclick = () => act('portrait', 'slide', { pos: +b.dataset.pos });
+// Father's portrait: sweep a pool of light over it and click the paper hidden in the canvas.
+function openPortrait() {
+  const [sx, sy] = P.portrait.spot;
+  overlay('portrait', `<h2>Father's portrait</h2><p class="muted">Something about this painting is not right. Look closely, and click where it hides something.</p>
+    <div class="spot-pic" id="pz-spot">
+      <svg class="spot-clue" style="left:${sx * 100}%;top:${sy * 100}%" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M6 30 L33 12" class="slit"/><path d="M14 25 L30 14 L27 24 Z" class="paper"/><path d="M19 22 l5 -3 M20 24 l4 -2" class="ink"/>
+      </svg>
+      <div class="spot-dark"></div>
+    </div><p class="fuse-status" id="pz-spot-msg"></p>`, (body) => {
+    const el = body.querySelector('#pz-spot');
+    const at = (e) => {
+      const r = el.getBoundingClientRect();
+      return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height];
+    };
+    const light = (e) => {
+      const [x, y] = at(e);
+      el.style.setProperty('--lx', `${x * 100}%`);
+      el.style.setProperty('--ly', `${y * 100}%`);
+    };
+    el.addEventListener('pointermove', light);
+    el.addEventListener('pointerdown', (e) => {
+      light(e);
+      const [x, y] = at(e);
+      act('portrait', 'search', { x: +x.toFixed(3), y: +y.toFixed(3) }).then((r) => {
+        if (r?.solved) { el.classList.add('found'); audio.play('paper_pickup', { volume: 0.6 }); }
+        body.querySelector('#pz-spot-msg').textContent = r?.solved ? 'A folded page, slipped through a cut in the canvas. Something is behind the frame.' : r?.msg || '';
+      });
+    });
+  });
 }
 
 // Fuse box
 const BASE = { I: 10, L: 3, T: 11 };
 const rotMask = (m, r) => { for (let i = 0; i < r; i++) m = ((m << 1) | (m >> 3)) & 15; return m; };
+// Power enters tile 4 (second row) from the left and must leave tile 11 (third row) to the right.
+const FUSE_IN = 4, FUSE_OUT = 11;
 function poweredSet(types, rot) {
   const mask = (i) => rotMask(BASE[types[i]], rot[i]);
   const on = new Set();
-  if (!(mask(4) & 8)) return on;
-  on.add(4);
-  const q = [4];
+  let out = false;
+  if (!(mask(FUSE_IN) & 8)) return { on, out };
+  on.add(FUSE_IN);
+  const q = [FUSE_IN];
   while (q.length) {
     const t = q.shift(), m = mask(t), r = Math.floor(t / 4), c = t % 4;
+    if (t === FUSE_OUT && (m & 2)) out = true;
     for (const [d, dr, dc] of [[1, -1, 0], [2, 0, 1], [4, 1, 0], [8, 0, -1]]) {
       const nr = r + dr, nc = c + dc;
       if (!(m & d) || nr < 0 || nr > 3 || nc < 0 || nc > 3) continue;
@@ -529,23 +554,33 @@ function poweredSet(types, rot) {
       on.add(nt); q.push(nt);
     }
   }
-  return on;
+  return { on, out };
 }
 function openFuse() {
-  overlay('fuse', `<h2>Fuse box</h2><p class="muted">Turn the wire pieces so power runs from the mains (left) to the Conservatory (right).</p>
-    <div class="fuse-wrap"><span class="fuse-end in">⚡</span><div class="fuse" id="pz-fuse"></div><span class="fuse-end out">🌿</span></div>`);
+  overlay('fuse', `<h2>Fuse box</h2><p class="muted">Click the wire pieces to turn them. Lead the power from <b>MAINS</b> to <b>CONSERVATORY</b>: lit wire carries power.</p>
+    <div class="fuse-wrap" id="pz-fuse"></div><p class="fuse-status" id="pz-fuse-status"></p>`);
   renderFuse();
 }
 function renderFuse() {
   const el = document.getElementById('pz-fuse');
   if (!el) return;
   const s = P.fuse;
-  const on = poweredSet(s.types, s.rot);
-  el.innerHTML = s.types.map((t, i) => {
+  const { on, out } = poweredSet(s.types, s.rot);
+  const done = s.solved || out;
+  const tiles = s.types.map((t, i) => {
     const m = rotMask(BASE[t], s.rot[i]);
     const seg = [[1, '50,50 50,0'], [2, '50,50 100,50'], [4, '50,50 50,100'], [8, '50,50 0,50']].filter(([d]) => m & d).map(([, p]) => `<polyline points="${p}"/>`).join('');
-    return `<button class="ftile ${on.has(i) ? 'on' : ''}" data-i="${i}" aria-label="Wire piece"><svg viewBox="0 0 100 100">${seg}<circle cx="50" cy="50" r="7"/></svg></button>`;
+    const r = Math.floor(i / 4) + 1, c = (i % 4) + 2;
+    return `<button class="ftile ${on.has(i) ? 'on' : ''}" style="grid-row:${r};grid-column:${c}" data-i="${i}" aria-label="Wire piece"><svg viewBox="0 0 100 100">${seg}<circle cx="50" cy="50" r="7"/></svg></button>`;
   }).join('');
+  const rIn = Math.floor(FUSE_IN / 4) + 1, rOut = Math.floor(FUSE_OUT / 4) + 1;
+  el.innerHTML = `<div class="fuse">
+    <div class="fuse-term in on" style="grid-row:${rIn};grid-column:1"><span>⚡</span><small>MAINS</small></div>
+    ${tiles}
+    <div class="fuse-term out ${done ? 'on' : ''}" style="grid-row:${rOut};grid-column:6"><span>${done ? '💡' : '○'}</span><small>CONSERV.</small></div>
+  </div>`;
+  document.getElementById('pz-fuse-status').textContent = done ? 'Power is flowing. The Conservatory lights hum on.' : `Power reaches ${on.size} of 16 pieces.`;
+  if (s.solved) return;
   for (const b of el.querySelectorAll('[data-i]')) b.onclick = () => { audio.play('flashlight_click', { volume: 0.4, rate: 0.7 }); act('fuse', 'rotate', { i: +b.dataset.i }); };
 }
 
