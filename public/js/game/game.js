@@ -139,10 +139,7 @@ function init() {
     if (slam) {
       audio.play('door_slam', { at: d.pos, scene, volume: 1, refDistance: 4 });
       if (prefs.captions) caption('[A door slams]');
-    } else {
-      audio.play('creak', { at: d.pos, scene, volume: 0.7, refDistance: 2.5, rate: drift ? 0.7 : 1 });
-      if (drift && prefs.captions && camera.position.distanceTo(d.pos) < 10) caption('[A door creaks slowly shut]');
-    }
+    } else if (drift && prefs.captions && camera.position.distanceTo(d.pos) < 10) caption('[A door swings slowly shut]');
   });
   on('ping:placed', onPing);
   on('note:found', onNoteFound);
@@ -150,6 +147,11 @@ function init() {
   on('puzzle:solved', (e) => running && onPuzzleSolved(e));
   on('director:event', (e) => running && onDirectorEvent(e));
   on('scribble:add', (s) => running && onScribbleAdded(s));
+  on('hint:note', ({ text }) => {
+    if (!running) return;
+    caption(`[Hint] ${text}`, 9000);
+    chatLine({ system: true, text: `Hint: ${text}` }, $('#game-chat-log'));
+  });
 
   addEventListener('resize', resize);
   resize();
@@ -339,7 +341,6 @@ function update(dt) {
   scene.fog.color.setHex(outside ? 0x05070c : 0x000000);
   scene.fog.density += ((outside ? 0.075 : 0.055) - scene.fog.density) * Math.min(1, dt * 2);
   footstep(moving, jogging, outside);
-  wallCreak(outside);
 
   for (const d of doors) d.update(dt);
   updateHouse(dt, area === 'staircase' || area === 'foyer');
@@ -361,7 +362,7 @@ function update(dt) {
   }
 }
 
-// ---------------------------------------------------------------------------- Footsteps and creaks
+// ---------------------------------------------------------------------------- Footsteps
 
 // One step each half bob cycle, so the sound lands with the camera's dip.
 let stepPhase = 0;
@@ -371,27 +372,6 @@ function footstep(moving, jogging, outside) {
   stepPhase = k;
   const soft = outside ? 0.55 : 1; // grass muffles them
   audio.play('step', { volume: (jogging ? 0.5 : 0.3) * soft, rate: (outside ? 0.78 : 1) * (0.92 + Math.random() * 0.16) });
-}
-
-// The old house settles: now and then a wall creaks as you pass close to it.
-const creakRay = new THREE.Raycaster();
-creakRay.far = 0.9;
-const AROUND = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([x, z]) => new THREE.Vector3(x, 0, z));
-let creakCheck = 0, creakQuietUntil = performance.now() + 30000;
-function wallCreak(outside) {
-  const now = performance.now();
-  if (outside || now < creakCheck || now < creakQuietUntil) return;
-  creakCheck = now + 1000;
-  for (const dir of AROUND) {
-    creakRay.set(camera.position, dir);
-    const hit = creakRay.intersectObjects(staticMeshes, false)[0];
-    if (!hit) continue;
-    if (Math.random() < 0.25) {
-      audio.play('creak', { at: hit.point, scene, volume: 0.22 + Math.random() * 0.2, rate: 0.85 + Math.random() * 0.3, refDistance: 1.4 });
-      creakQuietUntil = now + 45000 + Math.random() * 60000;
-    }
-    return;
-  }
 }
 
 // ---------------------------------------------------------------------------- Interaction
@@ -439,7 +419,7 @@ function updateFocus() {
 function useDoor(d) {
   if (d.locked) {
     caption(d.lockedText || 'It is locked.');
-    audio.play('creak', { at: d.pos, scene, volume: 0.3, rate: 1.3 });
+    audio.play('knock', { at: d.pos, scene, volume: 0.25, rate: 1.6 });
     return;
   }
   send('door:toggle', d.id);

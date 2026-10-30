@@ -43,7 +43,7 @@ function panels(kind) {
     return [
       { ms: 6500, html: `<div class="same-hand"><div class="note-paper morph"><p>${esc(note.text.slice(0, 150))}…</p></div><div class="note-paper ledger morph late"><p><b>22 Oct</b> — Posted the letter. Melisa is happy now.</p><p><b>29 Oct</b> — Paper, two hundred sheets. Ink, black.</p></div></div><p class="ending-line small">The notes and Steven's ledger. The same hand.</p>`, sound: 'paper_pickup' },
       { ms: 4500, html: '<p class="ending-line big">Melissa never wrote a word of it.</p>' },
-      { ms: 5500, html: '<p class="ending-line">The Study bookcase grinds open.</p><p class="ending-line late">Behind it, a small room. Stacks of pages. A pen. The ink is still wet.</p>', sound: 'creak', rate: 0.5 },
+      { ms: 5500, html: '<p class="ending-line">The Study bookcase grinds open.</p><p class="ending-line late">Behind it, a small room. Stacks of pages. A pen. The ink is still wet.</p>', sound: 'knock', rate: 0.5 },
       { ms: 4000, html: '<p class="ending-line">But no Steven.</p><p class="ending-line late">He is never found.</p>' },
       { ms: 7000, html: newspaper(e) },
       { ms: 7000, html: '<div class="note-paper fresh-page"><p class="typed" data-text="Dear investigators,"></p></div>', type: true },

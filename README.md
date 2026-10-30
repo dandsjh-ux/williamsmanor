@@ -39,6 +39,29 @@ Then open http://localhost:3000. To test multiplayer on one computer, open a sec
 
 Which floorboard, portrait and drawer is the right one changes every game.
 
+### Where every note is (spoilers)
+
+| Note | Room | How to get it |
+|---|---|---|
+| 1 | Foyer | Search the umbrella stand by the front door. |
+| 2 | Bird Room (upstairs) | Read the note pinned to the east wall beside the scratches, near the bed. |
+| 3 | Master Bedroom (upstairs) | Check the pocket of the white dress by the wardrobe. |
+| 4 | Nursery (upstairs) | Lift the music box on the little table. |
+| 5 | Drawing Room | Examine Father's portrait over the fireplace and solve the 3×3 slider. The portrait slides aside and the note is behind it. |
+| 6 | Kitchen → Dining Room | Hold the crank in the Kitchen until the dumbwaiter is up, set the latch, then open the Dining Room hatch within 10 seconds. Easier with two: one cranks, one waits at the hatch. |
+| 7 | Cellar → Conservatory | Needs the Cellar open (note 11's key). Turn the wire tiles in the Cellar fuse box until power flows from the left side to the right. The Conservatory lights come on and the note is on the low bench. |
+| 8 | Bird Room (upstairs) | Walk slowly over the boards near the bed. One knocks hollow underfoot; hold Interact on it to pry it up. |
+| 9 | Portrait Hall (upstairs) | Shine your torch on the photographs of Steven Williams I and II. Examine the one whose eyes follow you; it swings aside and the note is behind it. |
+| 10 | Foyer → Grand Staircase | Set the grandfather clock in the Foyer to 12:00. A tread halfway up the staircase opens. |
+| 11 | Kitchen → Cellar | Open the Kitchen drawers until one holds the cellar key. The cellar door unlocks; the note is on a barrel at the back of the Cellar. |
+| 12 | Garden | Out through the back door or the Conservatory. Find the one white rose bush among the red ones and hold Interact to dig. The note is in the tin box. |
+
+Two extras give no note but help with the deduction: the brass lock on the Study desk (code 37, from the 37 tally marks in the Cellar) opens Steven's ledger, and wiping the fogged Bathroom mirror reveals writing.
+
+### Hints
+
+Every minute of searching (paused time does not count), every player gets a hint about one note nobody has found yet. The first hint about a note names the room; the second says exactly what to do. Hints go round the unfound notes in turn and stop once all 12 are found. If someone is stuck in one room for three minutes, they also get a whispered hint for that room's puzzle (Whisper hints setting).
+
 ## Assets
 
 The raw files you supplied sit in the project root. `npm run assets` (needs ffmpeg) converts them into:
@@ -48,7 +71,7 @@ The raw files you supplied sit in the project root. `npm run assets` (needs ffmp
 - `public/assets/melissa.jpg` — cropped from `missingposter.jpg`.
 - `public/assets/portraits/steven_i.jpg` … `steven_iv.jpg`.
 
-Where only one recording existed for a numbered set (flicker, knock, whisper), the script derives the extra variants by pitch-shifting or reversing it. There is one creak: doors use it, and walls creak now and then when someone walks close by. The main theme is the only music and plays under every screen; there is no rain.
+Where only one recording existed for a numbered set (flicker, knock, whisper), the script derives the extra variants by pitch-shifting or reversing it. There is one creak, and it plays only once: when the front door opens as the players enter the mansion. Doors open silently. The main theme is the only music and plays under every screen; there is no rain.
 
 ## Code layout
 

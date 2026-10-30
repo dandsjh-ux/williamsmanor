@@ -9,6 +9,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NOTE_PUZZLE, newPuzzles, publicPuzzles, applyAction } from './server/puzzles.js';
 import { newDirector, tickDirector } from './server/director.js';
+import { newHints, tickHints } from './server/hints.js';
 import { newBoard, moveCard, lockIn } from './server/board.js';
 
 const PORT = process.env.PORT || 3000;
@@ -190,6 +191,7 @@ function resetHouse(room) {
   room.notes = {};   // id -> { byId, by, color, at }
   room.puzzles = newPuzzles();
   room.director = newDirector();
+  room.hints = newHints();
   room.dynScribbles = [];
   room.board = null;
   room.ending = null;
@@ -216,6 +218,7 @@ setInterval(() => {
   for (const room of rooms.values()) {
     const t = room.timer;
     if (room.phase !== 'investigation' || !t || t.pausedLeft != null) continue;
+    tickHints(room, (event, payload) => io.to(room.code).emit(event, payload));
     const progress = Math.min(1, 1 - (t.endsAt - Date.now()) / t.total);
     tickDirector(room, (event, payload, playerId) => {
       if (event === 'door:state') systemDoor(room, payload);
