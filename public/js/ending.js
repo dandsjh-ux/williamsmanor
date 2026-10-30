@@ -25,7 +25,6 @@ const ENDINGS = {
 };
 
 let timers = [];
-let sounds = [];
 let onDone = null;
 
 function newspaper(e) {
@@ -71,7 +70,6 @@ export function playEnding(ending, done) {
   onDone = done;
   const list = panels(ending.kind);
   const stage = $('#ending-stage');
-  sounds = [audio.play('rain_loop', { loop: true, volume: 0.25, fadeIn: 2 }), audio.play('music_box', { loop: true, volume: 0.3, fadeIn: 3 })];
   let t = 400;
   list.forEach((p) => {
     timers.push(setTimeout(() => {
@@ -97,8 +95,6 @@ function typeOut(el) {
 function stop() {
   timers.forEach(clearTimeout);
   timers = [];
-  sounds.forEach((s) => s.stop(1.5));
-  sounds = [];
 }
 
 function finish() {

@@ -27,7 +27,7 @@ const HINTS = {
   dumbwaiter: ['The little lift between the Kitchen and the Dining Room still works.', 'Crank it up, set the latch, then run to the Dining Room hatch. Two can do it faster.'],
   fuse: ['The Conservatory has no power. The fuse box is in the Cellar.', 'Turn the wire pieces until power runs from one side to the other.'],
   floorboard: ['She hid something under the floor, near the bed.', 'Walk slowly over the boards. Listen for one that sounds hollow.'],
-  eyes: ['One of the portraits is not a painting at all.', 'Shine your light on each face. Whose eyes follow you?'],
+  eyes: ['One of the old photographs is watching you.', 'Shine your light on each face in the Portrait Hall. Whose eyes follow you?'],
   clock: ["Father's clock knows the way down.", 'Twelve, twelve, twelve. Set both hands to midnight.'],
   cellarKey: ['The Cellar is locked. Someone keeps the key close to the stove.', 'Search the Kitchen drawers.'],
   roseDig: ['White for her, red for the rest.', 'Find the one white rose bush and dig.'],
@@ -115,7 +115,7 @@ export function buildPuzzles(hooks) {
     },
     use: () => {
       const s = P.dumbwaiter;
-      if (!s.raised) { audio.play('creak', { at: crank, volume: 0.8, rate: 0.7 }); act('dumbwaiter', 'raise'); } else act('dumbwaiter', 'latch').then(() => audio.play('lock_open', { at: crank, volume: 0.6 }));
+      if (!s.raised) { audio.play('knock', { at: crank, volume: 0.6, rate: 0.7 }); act('dumbwaiter', 'raise'); } else act('dumbwaiter', 'latch').then(() => audio.play('lock_open', { at: crank, volume: 0.6 }));
     },
   });
   add({
@@ -144,22 +144,12 @@ export function buildPuzzles(hooks) {
     });
   }
 
-  // 5. Moving eyes: pupils on the six Portrait Hall paintings.
+  // 5. The watching portrait: on one of the two photographs, the eyes follow your light.
   props.eyes = [];
-  const white = new THREE.MeshLambertMaterial({ color: 0xcfc6b0, emissive: 0x6a6050 });
-  const pupil = new THREE.MeshBasicMaterial({ color: 0x050302 });
-  followArea('hall', white, 0.8);
   anchors.portraits.hall.forEach((p, i) => {
-    const eyes = [];
-    for (const dx of [-0.055, 0.055]) {
-      const w = new THREE.Mesh(new THREE.CircleGeometry(0.02, 12), white);
-      w.position.set(p.position.x + dx, p.position.y + 0.112, p.position.z + 0.004);
-      const pu = new THREE.Mesh(new THREE.CircleGeometry(0.009, 10), pupil);
-      pu.position.copy(w.position).add(new THREE.Vector3(0, 0, 0.002));
-      scene.add(w, pu);
-      eyes.push({ base: pu.position.clone(), pupil: pu });
-    }
-    props.eyes.push({ portrait: p, eyes, home: p.position.clone() });
+    const e = { portrait: p, home: p.position.clone(), patches: [], look: new THREE.Vector2(), drawn: new THREE.Vector2() };
+    props.eyes.push(e);
+    p.material.map.userData.ready.then((map) => buildEyePatches(e, map, anchors.portraits.hallEyes[i]));
     add({
       mesh: p,
       prompt: () => (solved('eyes') ? null : 'Examine the portrait'),
@@ -196,7 +186,7 @@ export function buildPuzzles(hooks) {
     add({
       mesh: d,
       prompt: () => (P.cellarKey?.opened.includes(i) ? null : 'Open the drawer'),
-      use: () => { audio.play('creak', { at: d, volume: 0.5, rate: 1.6 }); act('cellarKey', 'drawer', { i }); },
+      use: () => { audio.play('knock', { at: d, volume: 0.3, rate: 1.5 }); act('cellarKey', 'drawer', { i }); },
     });
   }
   props.key = box(0.16, 0.02, 0.05, keyMat, [0, 0, 0]);
@@ -298,12 +288,14 @@ function apply(id, live) {
     }
     case 'eyes': {
       const e = props.eyes[s.which];
+      if (!e) break;
       setNotePos(9, [e.home.x, e.home.y, -9.885], '+z');
       if (s.solved) {
         const p = e.portrait;
         if (live) { tween(p.position, 'x', e.home.x + 0.75); tween(p.rotation, 'y', 0.9); } else { p.position.x = e.home.x + 0.75; p.rotation.y = 0.9; }
         p.position.z = e.home.z + 0.3;
-        for (const ey of e.eyes) ey.pupil.parent && (ey.pupil.visible = false);
+        e.look.set(0, 0);
+        for (const pt of e.patches) drawEye(pt, 0, 0);
       }
       break;
     }
@@ -332,6 +324,66 @@ function apply(id, live) {
       break;
     default: break;
   }
+}
+
+// ---------------------------------------------------------------------------- The watching portrait
+
+const WARM = new THREE.Color(1, 0.82, 0.6);
+
+// Small patches cut from the photograph and laid over each eye. At rest they match the
+// photo exactly; on the watching portrait the iris inside is redrawn shifted toward you.
+function buildEyePatches(e, map, eyes) {
+  const src = map.userData.canvas;
+  const { width: PW, height: PH } = e.portrait.geometry.parameters;
+  for (const eye of eyes) {
+    const [cx, cy, k] = map.userData.toCanvas(eye.x, eye.y);
+    const rx = eye.rx * k, ry = eye.ry * k, ri = eye.ri * k;
+    const pw = Math.ceil(rx * 2.6), ph = Math.ceil(ry * 3.4);
+    const x0 = Math.round(cx - pw / 2), y0 = Math.round(cy - ph / 2);
+    const c = document.createElement('canvas');
+    c.width = pw; c.height = ph;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(src, x0, y0, pw, ph, 0, 0, pw, ph);
+    // The white of the eye: the brightest third of the pixels in the opening, around the iris
+    const px = ctx.getImageData(0, 0, pw, ph).data, lum = [];
+    for (let y = 0; y < ph; y++) {
+      for (let x = 0; x < pw; x++) {
+        const ex = (x - (cx - x0)) / rx, ey = (y - (cy - y0)) / ry, d = Math.hypot(x - (cx - x0), y - (cy - y0));
+        if (ex * ex + ey * ey > 1 || d < ri) continue;
+        const i = (y * pw + x) * 4;
+        lum.push([px[i] + px[i + 1] + px[i + 2], px[i], px[i + 1], px[i + 2]]);
+      }
+    }
+    lum.sort((a, b) => b[0] - a[0]);
+    const top = lum.slice(0, Math.max(1, Math.floor(lum.length / 3)));
+    const avg = [1, 2, 3].map((j) => Math.round(top.reduce((s, v) => s + v[j], 0) / top.length));
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    const m = new THREE.MeshLambertMaterial({ map: tex, emissive: WARM.clone(), emissiveMap: tex, polygonOffset: true, polygonOffsetFactor: -2 });
+    followArea('hall', m, 1.05);
+    const patch = new THREE.Mesh(new THREE.PlaneGeometry((pw / src.width) * PW, (ph / src.height) * PH), m);
+    patch.position.set(((x0 + pw / 2) / src.width - 0.5) * PW, (0.5 - (y0 + ph / 2) / src.height) * PH, 0.002);
+    e.portrait.add(patch);
+    e.patches.push({ ctx, tex, src, x0, y0, pw, ph, cx: cx - x0, cy: cy - y0, rx, ry, ri, white: `rgb(${avg.join(',')})` });
+  }
+}
+
+function drawEye(pt, dx, dy) {
+  const { ctx, src, x0, y0, pw, ph, cx, cy, rx, ry, ri } = pt;
+  ctx.drawImage(src, x0, y0, pw, ph, 0, 0, pw, ph);
+  if (Math.abs(dx) + Math.abs(dy) > 0.05) {
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.clip();
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, ri * 1.2);
+    g.addColorStop(0, pt.white); g.addColorStop(0.75, pt.white); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - ri * 1.3, cy - ri * 1.3, ri * 2.6, ri * 2.6);
+    ctx.beginPath(); ctx.arc(cx + dx, cy + dy, ri, 0, Math.PI * 2); ctx.clip();
+    ctx.drawImage(src, x0, y0, pw, ph, dx, dy, pw, ph);
+    ctx.restore();
+  }
+  pt.tex.needsUpdate = true;
 }
 
 // ---------------------------------------------------------------------------- Per frame
@@ -370,17 +422,16 @@ export function updatePuzzles(dt, { me, cam, fwd, flashOn, hints }) {
     if (sec > 0 && sec !== dw.shown && (me.area === 'kitchen' || me.area === 'dining' || me.area === 'foyer')) { dw.shown = sec; if (sec <= 10 && sec % 2 === 0) H.caption(`[The latch creaks… ${sec}]`, 1200); }
   }
 
-  // Bird Room floorboards: one creaks hollow underfoot.
+  // Bird Room floorboards: one knocks hollow underfoot.
   const fb = P.floorboard;
   if (fb && me.area === 'bird' && !fb.solved) {
     let on = -1;
     props.boards.forEach((b, i) => { if (Math.abs(me.x - b.position.x) < 0.13 && Math.abs(me.z - b.position.z) < 0.9) on = i; });
     if (on !== lastBoard && on >= 0) {
-      const hollow = on === fb.which;
-      audio.play('creak', { at: props.boards[on], volume: hollow ? 0.9 : 0.35, rate: hollow ? 0.55 : 1.3 });
-      if (hollow) {
+      if (on === fb.which) {
+        audio.play('knock', { at: props.boards[on], volume: 0.9, rate: 0.55 });
         heardHollow.add(on);
-        H.caption('[A hollow creak underfoot]', 3000);
+        H.caption('[A hollow knock underfoot]', 3000);
         puffDust(props.boards[on].position);
       }
     }
@@ -395,15 +446,18 @@ export function updatePuzzles(dt, { me, cam, fwd, flashOn, hints }) {
 
   // Eyes follow you, but only on the right portrait and only in your light.
   const ey = P.eyes;
-  if (ey && !ey.solved) {
-    const e = props.eyes[ey.which];
+  const e = ey && !ey.solved ? props.eyes[ey.which] : null;
+  if (e?.patches.length) {
     tmp.subVectors(e.portrait.position, cam).normalize();
     const lit = flashOn && fwd.dot(tmp) > Math.cos(0.45) && cam.distanceTo(e.portrait.position) < 9;
-    for (const eye of e.eyes) {
-      const dx = lit ? THREE.MathUtils.clamp((cam.x - eye.base.x) * 0.004, -0.008, 0.008) : 0;
-      const dy = lit ? THREE.MathUtils.clamp((cam.y - eye.base.y) * 0.006, -0.006, 0.006) : 0;
-      eye.pupil.position.x += (eye.base.x + dx - eye.pupil.position.x) * Math.min(1, dt * 6);
-      eye.pupil.position.y += (eye.base.y + dy - eye.pupil.position.y) * Math.min(1, dt * 6);
+    const local = e.portrait.worldToLocal(tmp.copy(cam));
+    const tx = lit ? THREE.MathUtils.clamp(local.x / Math.max(0.8, local.z), -1, 1) : 0;
+    const ty = lit ? THREE.MathUtils.clamp(-local.y / Math.max(0.8, local.z), -1, 1) : 0;
+    e.look.x += (tx - e.look.x) * Math.min(1, dt * 5);
+    e.look.y += (ty - e.look.y) * Math.min(1, dt * 5);
+    if (Math.abs(e.look.x - e.drawn.x) + Math.abs(e.look.y - e.drawn.y) > 0.015) {
+      e.drawn.copy(e.look);
+      for (const pt of e.patches) drawEye(pt, e.look.x * pt.ri * 1.3, e.look.y * pt.ri * 0.45);
     }
   }
 

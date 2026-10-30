@@ -6,7 +6,7 @@ import { prefs, isTouch } from '../prefs.js';
 import { send, on } from '../net.js';
 import * as audio from '../audio.js';
 import { $, esc, openModal, closeModal, modalOpen, settingsHTML, wireSettings, controlsTabs, toast } from '../ui.js';
-import { buildHouse, AREAS, LEVEL, areaAtPos, areaBrightness, doors, doorById, interactables, staticMeshes, anchors } from './house.js';
+import { buildHouse, updateHouse, AREAS, LEVEL, areaAtPos, areaBrightness, doors, doorById, interactables, staticMeshes, anchors } from './house.js';
 import { move, rayBlocked, EYE } from './physics.js';
 import { input, attachControls, lockPointer } from './controls.js';
 import { Teammates } from './players.js';
@@ -19,7 +19,7 @@ import { noteById, NOTES } from '../data/notes.js';
 const PINGS = ['Over here', 'Found a note', 'Need a second player', "Something's wrong"];
 const WALK = 2.6, JOG = 4.3, STAMINA = 4, BATTERY_SEC = 240;
 
-let renderer, scene, camera, flashlight, roomLight, hemi, team, built = false;
+let renderer, scene, camera, flashlight, roomLight, hemi, team, grain, built = false;
 let running = false, lastT = 0, sendAcc = 0;
 let room = null, selfId = null, isHost = false;
 let timerAt = 0;
@@ -28,7 +28,7 @@ let hooks = {};
 const me = { x: 0, y: 0, z: 7.5, vy: 0, yaw: 0, pitch: 0, flash: false, area: 'foyer', stamina: STAMINA, battery: 1, bob: 0 };
 let chatOpen = false, wheelOpen = false, pausedAt = 0;
 let focus = null;               // interactable under the crosshair
-let rainSound = null, tickSound = null;
+let tickSound = null;
 const pingMarkers = [];
 const batteries = [];
 
@@ -42,22 +42,27 @@ function init() {
   renderer.shadowMap.enabled = high;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.autoClear = false; // the film grain is drawn over each frame
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
-  scene.fog = new THREE.FogExp2(0x000000, 0.06);
+  scene.fog = new THREE.FogExp2(0x000000, 0.065);
 
   camera = new THREE.PerspectiveCamera(72, 1, 0.05, 80);
   camera.rotation.order = 'YXZ';
   camera.add(audio.listener);
   scene.add(camera);
 
-  hemi = new THREE.HemisphereLight(0x5a6680, 0x140c08, 0.22);
+  // Barely any light to see by: a whisper of moonlight everywhere, and a pool of lamplight
+  // around the lamp of whichever room you are in.
+  hemi = new THREE.HemisphereLight(0x4a5670, 0x0c0806, 0.07);
   scene.add(hemi);
-  roomLight = new THREE.PointLight(0xffc48a, 0, 11, 1.4);
+  roomLight = new THREE.PointLight(0xffb070, 0, 12, 2);
   scene.add(roomLight);
 
-  flashlight = new THREE.SpotLight(0xfff1d6, 0, 22, 0.5, 0.5, 1.5);
+  flashlight = new THREE.SpotLight(0xfff1d6, 0, 22, 0.5, 0.62, 1.5);
   flashlight.position.set(0.18, -0.22, 0.05);
   flashlight.target.position.set(0.05, -0.1, -4);
   flashlight.castShadow = high;
@@ -86,6 +91,7 @@ function init() {
     inOverlay: () => modalOpen(),
   });
   team = new Teammates(scene, high ? 7 : 3);
+  grain = filmGrain();
 
   for (const d of doors) d.onUse = useDoor;
 
@@ -184,7 +190,6 @@ export function startGame({ room: r, selfId: id, saved, hooks: h }) {
   running = true;
   input.enabled = true;
   resize();
-  rainSound = audio.play('rain_loop', { loop: true, volume: 0.16, fadeIn: 2 });
   tickSound = audio.play('clock_tick', { loop: true, at: anchors.clock, scene, volume: 0.55, refDistance: 1.2, rolloff: 1.8 });
   resetDirector();
   resetLocal();
@@ -210,7 +215,6 @@ export function stopGame() {
   closeChat();
   toggleWheel(false);
   if (modalOpen()) closeModal();
-  rainSound?.stop(1);
   tickSound?.stop(0.5);
   team?.clear();
   for (const p of pingMarkers.splice(0)) scene.remove(p.obj);
@@ -247,7 +251,50 @@ function loop(t) {
   lastT = t;
   if (sizeKey !== `${innerWidth}x${innerHeight}@${devicePixelRatio}`) resize(); // window moved to another screen, zoom, rotation
   update(dt);
+  renderer.clear();
   renderer.render(scene, camera);
+  grain.draw(t);
+}
+
+// Film grain and a vignette, drawn over the finished frame. The multiply pass modulates the
+// image (darks stay dark); the faint additive pass gives the blacks their speckle.
+function filmGrain() {
+  const res = new THREE.Vector2();
+  const uniforms = { uTime: { value: 0 }, uRes: { value: res } };
+  const frag = (body) => `
+    uniform float uTime; uniform vec2 uRes;
+    float hash(vec2 p) { p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
+    void main() {
+      vec2 uv = gl_FragCoord.xy / uRes;
+      float n = hash(floor(gl_FragCoord.xy) + floor(fract(uTime * 0.37) * 4096.0));
+      ${body}
+    }`;
+  const vert = 'void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }';
+  const multiply = new THREE.ShaderMaterial({
+    uniforms, vertexShader: vert, depthTest: false, depthWrite: false,
+    fragmentShader: frag(`vec2 d = uv - 0.5; float vig = clamp(1.0 - dot(d, d) * 1.25, 0.0, 1.0);
+      gl_FragColor = vec4(vec3(0.5 * vig * (1.0 + (n - 0.5) * 0.24)), 1.0);`),
+    blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.DstColorFactor, blendDst: THREE.SrcColorFactor,
+  });
+  const add = new THREE.ShaderMaterial({
+    uniforms, vertexShader: vert, depthTest: false, depthWrite: false, transparent: true,
+    fragmentShader: frag('gl_FragColor = vec4(vec3(pow(n, 6.0) * 0.05), 1.0);'),
+    blending: THREE.AdditiveBlending,
+  });
+  const quad = new THREE.PlaneGeometry(2, 2);
+  const s = new THREE.Scene();
+  const a = new THREE.Mesh(quad, multiply), b = new THREE.Mesh(quad, add);
+  a.frustumCulled = b.frustumCulled = false;
+  b.renderOrder = 1;
+  s.add(a, b);
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  return {
+    draw(t) {
+      uniforms.uTime.value = t / 1000;
+      renderer.getDrawingBufferSize(res);
+      renderer.render(s, cam);
+    },
+  };
 }
 
 const fwd = new THREE.Vector3();
@@ -287,14 +334,16 @@ function update(dt) {
   if (area !== me.area) { me.area = area; showArea(area); enteredRoom(area); }
   const a = AREAS[area];
   const bright = areaBrightness(area);
-  if (a.lamp && bright > 0.02) { roomLight.position.set(...a.lamp); roomLight.intensity = bright * 9; } else roomLight.intensity = 0;
+  if (a.lamp && bright > 0.02) { roomLight.position.set(...a.lamp); roomLight.intensity = bright * (a.chandelier ? 40 : 16); } else roomLight.intensity = 0;
   const outside = !!a.outside;
   scene.fog.color.setHex(outside ? 0x05070c : 0x000000);
   scene.fog.density += ((outside ? 0.075 : 0.055) - scene.fog.density) * Math.min(1, dt * 2);
-  rainSound?.fade(outside ? 0.55 : a.level === 'C' ? 0.05 : 0.16, 0.6);
+  footstep(moving, jogging, outside);
+  wallCreak(outside);
 
   for (const d of doors) d.update(dt);
-  team.update(camera.position);
+  updateHouse(dt, area === 'staircase' || area === 'foyer');
+  team.update(camera.position, dt);
   updateFocus();
   const seen = updateScribbles(dt, camera.position, fwd, me.flash && input.enabled);
   if (seen && input.enabled) showScribble(seen);
@@ -309,6 +358,39 @@ function update(dt) {
   if (sendAcc >= 0.1) {
     sendAcc = 0;
     send('player:move', [me.x, me.y, me.z, me.yaw, me.pitch, me.flash, me.area, modalOpen() || chatOpen]);
+  }
+}
+
+// ---------------------------------------------------------------------------- Footsteps and creaks
+
+// One step each half bob cycle, so the sound lands with the camera's dip.
+let stepPhase = 0;
+function footstep(moving, jogging, outside) {
+  const k = Math.floor(me.bob / Math.PI);
+  if (!moving || k === stepPhase) return;
+  stepPhase = k;
+  const soft = outside ? 0.55 : 1; // grass muffles them
+  audio.play('step', { volume: (jogging ? 0.5 : 0.3) * soft, rate: (outside ? 0.78 : 1) * (0.92 + Math.random() * 0.16) });
+}
+
+// The old house settles: now and then a wall creaks as you pass close to it.
+const creakRay = new THREE.Raycaster();
+creakRay.far = 0.9;
+const AROUND = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([x, z]) => new THREE.Vector3(x, 0, z));
+let creakCheck = 0, creakQuietUntil = performance.now() + 30000;
+function wallCreak(outside) {
+  const now = performance.now();
+  if (outside || now < creakCheck || now < creakQuietUntil) return;
+  creakCheck = now + 1000;
+  for (const dir of AROUND) {
+    creakRay.set(camera.position, dir);
+    const hit = creakRay.intersectObjects(staticMeshes, false)[0];
+    if (!hit) continue;
+    if (Math.random() < 0.25) {
+      audio.play('creak', { at: hit.point, scene, volume: 0.22 + Math.random() * 0.2, rate: 0.85 + Math.random() * 0.3, refDistance: 1.4 });
+      creakQuietUntil = now + 45000 + Math.random() * 60000;
+    }
+    return;
   }
 }
 

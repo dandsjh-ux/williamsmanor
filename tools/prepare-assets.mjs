@@ -49,10 +49,13 @@ const sounds = [
   ['whisper_03', 'whisper_01.mp3', `${pitch(0.86)},atrim=4`, MONO],
   ['footsteps_01', 'footsteps_01.mp3', null, MONO],
   ['footsteps_02', 'footsteps_on_wood_#4-1793282026326.mp3', null, MONO],
+  // One creak only: doors use it, and the walls now and then when someone walks close by.
   ['creak_01', 'wooden_creaking_#2-1793282133102.mp3', TRIM, MONO],
-  ['creak_02', 'wooden_creaking_#4-1793282139685.mp3', TRIM, MONO],
-  ['creak_03', 'wooden_creaking_#2-1793282133102.mp3', `${TRIM},${pitch(0.78)}`, MONO],
-  ['creak_04', 'wooden_creaking_#4-1793282139685.mp3', `${TRIM},${pitch(1.15)}`, MONO],
+  // Single footsteps cut from the wood recording, one per stride
+  ...[0.549, 1.052, 1.594, 2.133, 2.665, 3.189, 3.742, 4.288].map((t, i) => [
+    `step_${String(i + 1).padStart(2, '0')}`, 'footsteps_on_wood_#4-1793282026326.mp3',
+    `atrim=start=${(t - 0.02).toFixed(3)}:duration=0.42,asetpts=PTS-STARTPTS,afade=t=out:st=0.28:d=0.14`, MONO,
+  ]),
   ['door_slam', 'Door🚪 Slam - (Loud) Sound.mp3', TRIM, MONO],
   ['music_box', 'Horror music box sound effect.mp3', null, ['-ac', '1', '-ar', '44100', '-b:a', '56k']],
   ['clock_tick', 'clock_tick.mp3', null, MONO],
@@ -63,26 +66,13 @@ const sounds = [
   ['paper_pickup', 'Paper_pickup.mp3', TRIM, MONO],
   ['lock_open', 'lock_open.mp3', TRIM, MONO],
   ['menu_theme', 'maintheme and background.mp3', null, ['-ac', '2', '-b:a', '48k']],
-  ['rain_loop', 'rain loop sound effect.mp3', null, STEREO],
 ];
 
 console.log('Audio -> public/audio');
 for (const [out, file, filter, ch] of sounds) {
   const input = src(file);
   const dest = join(audioOut, `${out}.mp3`);
-  if (!input) {
-    if (out === 'rain_loop') {
-      // The supplied rain file is empty: synthesise a soft stereo rain bed instead.
-      ffmpeg(['-f', 'lavfi', '-i', 'anoisesrc=color=pink:amplitude=0.5:d=24:seed=7',
-        '-f', 'lavfi', '-i', 'anoisesrc=color=pink:amplitude=0.5:d=24:seed=11',
-        '-filter_complex', '[0][1]amerge=inputs=2,highpass=f=350,lowpass=f=5200,volume=0.6,afade=t=in:d=0.4,afade=t=out:st=23.6:d=0.4',
-        ...STEREO, dest], out);
-      console.log(`  ~ ${out} (synthesised: "${file}" is empty)`);
-    } else {
-      console.log(`  - ${out} skipped (no "${file}")`);
-    }
-    continue;
-  }
+  if (!input) { console.log(`  - ${out} skipped (no "${file}")`); continue; }
   const args = ['-i', input];
   if (filter) args.push('-af', filter);
   args.push('-map_metadata', '-1', '-vn', ...ch, dest);
@@ -90,8 +80,9 @@ for (const [out, file, filter, ch] of sounds) {
 }
 
 // Images. Melissa's photo is cropped from the missing-person poster; the watermark
-// at the bottom of portrait1 is cropped away.
+// at the bottom of portrait1 is cropped away. manor.jpg is the main menu photo.
 const images = [
+  ['manor.jpg', assetOut, 'manor_exterior.png', 'scale=732:-2:flags=lanczos,unsharp=5:5:0.5'],
   ['melissa.jpg', assetOut, 'missingposter.jpg', 'crop=430:480:298:265,scale=860:960:flags=lanczos'],
   ['missing_poster.jpg', assetOut, 'missingposter.jpg', 'scale=1024:1024'],
   ['steven_i.jpg', portraitOut, 'portrait2.jpg', 'scale=800:-2:flags=lanczos'],

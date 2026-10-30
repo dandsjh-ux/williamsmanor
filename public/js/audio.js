@@ -6,8 +6,8 @@ import { prefs } from './prefs.js';
 
 // name -> number of variants (0 = a single file with no number)
 const MANIFEST = {
-  flicker: 2, knock: 3, whisper: 3, footsteps: 2, creak: 4,
-  rain_loop: 0, door_slam: 0, music_box: 0, clock_tick: 0, clock_chime: 0, scratch: 0,
+  flicker: 2, knock: 3, whisper: 3, footsteps: 2, creak: 1, step: 8,
+  door_slam: 0, music_box: 0, clock_tick: 0, clock_chime: 0, scratch: 0,
   heartbeat: 0, flashlight_click: 0, paper_pickup: 0, lock_open: 0, menu_theme: 0,
 };
 

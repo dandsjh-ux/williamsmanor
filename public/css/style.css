@@ -60,8 +60,8 @@ button, input, select { font: inherit; color: inherit; }
 /* Menu */
 #screen-menu { background: #070605; }
 .menu-photo { flex: 1 1 50%; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.photo-frame { position: relative; height: min(88vh, 120vw); aspect-ratio: 860 / 960; overflow: hidden; box-shadow: 0 0 80px #000 inset; }
-.photo-frame img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1) sepia(0.25) contrast(1.05) brightness(0.8); animation: pushin 40s ease-in-out infinite alternate; }
+.photo-frame { position: relative; height: min(92vh, 140vw); aspect-ratio: 366 / 546; overflow: hidden; box-shadow: 0 0 80px #000 inset; }
+.photo-frame img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(0.55) sepia(0.2) contrast(1.08) brightness(0.78); animation: pushin 40s ease-in-out infinite alternate; }
 .photo-frame::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.85) 100%); pointer-events: none; }
 .grain { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.16; mix-blend-mode: overlay; pointer-events: none; }
 .photo-flicker { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; animation: flicker 9s infinite; }

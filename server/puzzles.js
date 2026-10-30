@@ -81,7 +81,7 @@ export function newPuzzles() {
     dumbwaiter: { solved: false, raised: false, latchedUntil: 0 },
     fuse: { solved: false, ...newFuse() },
     floorboard: { solved: false, which: rand(6) },
-    eyes: { solved: false, which: rand(6) },
+    eyes: { solved: false, which: rand(2) }, // Steven I or Steven II, the photographs in the Portrait Hall
     clock: { solved: false, h: 3, m: 40 },
     cellarKey: { solved: false, which: rand(6), opened: [] },
     roseDig: { solved: false, dug: [] },
@@ -144,8 +144,8 @@ export function applyAction(puzzles, id, action, data = {}) {
       }
       break;
     case 'eyes':
-      if (action === 'open' && int(data.i, 0, 5)) {
-        if (data.i === s.which) solved = changed = true; else msg = 'Just paint and dust.';
+      if (action === 'open' && int(data.i, 0, 1)) {
+        if (data.i === s.which) solved = changed = true; else msg = 'Just an old photograph. The eyes stay still.';
       }
       break;
     case 'clock':

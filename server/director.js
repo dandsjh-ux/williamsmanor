@@ -24,7 +24,7 @@ function isDark(room, area) {
   return DARK.has(area) || (area === 'conservatory' && !room.puzzles.fuse.solved);
 }
 
-/** Near a point, on the same floor: where a knock or creak comes from. */
+/** Near a point, on the same floor: where a knock comes from. */
 function near(p, min, max) {
   const a = Math.random() * Math.PI * 2, r = rnd(min, max);
   return [+(p.x + Math.cos(a) * r).toFixed(2), +(p.y + 1.2).toFixed(2), +(p.z + Math.sin(a) * r).toFixed(2)];
@@ -60,12 +60,6 @@ export function tickDirector(room, emit, progress) {
     const occupied = [...new Set(all.map((p) => p.state.area))].filter((a) => !isDark(room, a));
     const area = occupied.length && Math.random() < 0.7 ? pick(occupied) : pick(['foyer', 'staircase', 'drawing', 'library', 'study', 'dining', 'kitchen', 'hall', 'master', 'bathroom']);
     emit('director:event', { type: 'flicker', area, dur: +rnd(0.5, progress < 0.25 ? 1.5 : 3).toFixed(1), cut: Math.random() < (progress < 0.25 ? 0.12 : 0.3) });
-  }
-
-  // Creaks all game
-  if (due('creak', 25, 50, 15)) {
-    const t = target();
-    if (t) emit('director:event', { type: 'creak', pos: near(t.state, 3, 6) });
   }
 
   if (progress >= 0.25) {

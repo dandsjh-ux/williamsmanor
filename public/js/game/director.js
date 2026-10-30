@@ -81,10 +81,6 @@ export function onDirectorEvent(e) {
       }
       break;
     }
-    case 'creak':
-      audio.play('creak', { at: v3(e.pos), scene: H.scene, volume: 0.8, refDistance: 2.5 });
-      cap(`[Floorboards creak, ${where(v3(e.pos))}]`);
-      break;
     case 'knock':
       audio.play('knock', { at: v3(e.pos), scene: H.scene, volume: 1, refDistance: 3 });
       cap(`[Knocking, ${where(v3(e.pos))}]`);

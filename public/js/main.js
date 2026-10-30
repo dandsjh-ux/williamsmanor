@@ -19,27 +19,22 @@ const app = {
   entered: false,        // this player has stepped into the house this game
   savedState: null,
 };
-let menuMusic = [];
+// The main theme starts at the gate and plays under every screen for the whole game.
+// In the house it drops back so knocks and footsteps carry.
+let music = null;
+const MUSIC_VOL = { game: 0.2, intro: 0.38, deduction: 0.3 };
 
 // ---------------------------------------------------------------------------- Screens
 
 function go(screen) {
   app.screen = screen;
   show(`screen-${screen}`);
-  if (screen === 'menu') startMenuAudio(); else if (screen !== 'host' && screen !== 'join') stopMenuAudio();
+  music?.fade(MUSIC_VOL[screen] ?? 0.45, 2);
   if (screen === 'join') refreshBrowser();
 }
 
-function startMenuAudio() {
-  if (menuMusic.length) return;
-  menuMusic = [
-    audio.play('menu_theme', { loop: true, volume: 0.45, fadeIn: 3 }),
-    audio.play('rain_loop', { loop: true, volume: 0.22, fadeIn: 3 }),
-  ];
-}
-function stopMenuAudio() {
-  for (const s of menuMusic) s.stop(1.5);
-  menuMusic = [];
+function startMusic() {
+  if (!music) music = audio.play('menu_theme', { loop: true, volume: 0.45, fadeIn: 3 });
 }
 
 // ---------------------------------------------------------------------------- Gate
@@ -47,6 +42,7 @@ function stopMenuAudio() {
 $('#gate-btn').addEventListener('click', () => {
   audio.unlock();
   audio.preload();
+  startMusic();
   if (app.pendingRejoin) {
     const r = app.pendingRejoin;
     app.pendingRejoin = null;
@@ -418,7 +414,6 @@ const INTRO = [
   'Find what she left behind.',
 ];
 let introTimers = [];
-let introSounds = [];
 
 function playIntro(short) {
   app.introPlayed = true;
@@ -433,11 +428,6 @@ function playIntro(short) {
   card.classList.add('hidden');
   $('#enter-house').disabled = true;
   $('#intro-skip').classList.toggle('hidden', app.room.hostId !== app.selfId || app.room.phase !== 'briefing');
-  introSounds.forEach((s) => s.stop(0.5));
-  introSounds = [
-    audio.play('rain_loop', { loop: true, volume: 0.35, fadeIn: 2 }),
-    audio.play('heartbeat', { loop: true, volume: 0.5, fadeIn: 3 }),
-  ];
   const step = short ? 2000 : 4000;
   INTRO.forEach((text, i) => {
     introTimers.push(setTimeout(() => {
@@ -482,8 +472,6 @@ $('#enter-house').addEventListener('click', () => {
 function enterHouse() {
   app.entered = true;
   introTimers.forEach(clearTimeout);
-  introSounds.forEach((s) => s.stop(1.5));
-  introSounds = [];
   go('game');
   startGame({ room: app.room, selfId: app.selfId, saved: app.savedState, hooks: { leave: leaveRoom } });
   app.savedState = null;

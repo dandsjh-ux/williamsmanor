@@ -30,7 +30,7 @@ Then open http://localhost:3000. To test multiplayer on one computer, open a sec
 | 6 | Dumbwaiter: hold the crank, set the latch, reach the Dining hatch in 10 s | Kitchen → Dining Room |
 | 7 | Fuse box wire tiles; powers the Conservatory | Cellar |
 | 8 | Hollow floorboard (listen for it), then pry it up | Bird Room |
-| 9 | The portrait whose eyes follow your flashlight | Portrait Hall |
+| 9 | The photograph whose eyes follow your flashlight (Steven I or II) | Portrait Hall |
 | 10 | Set the grandfather clock to 12:00; a stair tread opens | Foyer → Grand Staircase |
 | 11 | Find the cellar key in the Kitchen drawers | Kitchen → Cellar |
 | 12 | Dig at the one white rose bush (hold) | Garden |
@@ -43,11 +43,12 @@ Which floorboard, portrait and drawer is the right one changes every game.
 
 The raw files you supplied sit in the project root. `npm run assets` (needs ffmpeg) converts them into:
 
-- `public/audio/` — game sound names from the spec (`knock_01.mp3`, `creak_03.mp3` …). Positional sounds are mono.
+- `public/audio/` — game sound names from the spec (`knock_01.mp3`, `step_01.mp3` …). Positional sounds are mono. The single footsteps `step_01`–`step_08` are cut from the wood footsteps recording.
+- `public/assets/manor.jpg` — the main menu photo, from `manor_exterior.png`.
 - `public/assets/melissa.jpg` — cropped from `missingposter.jpg`.
 - `public/assets/portraits/steven_i.jpg` … `steven_iv.jpg`.
 
-Where only one recording existed for a numbered set (flicker, knock, whisper, creak), the script derives the extra variants by pitch-shifting or reversing it. `rain loop sound effect.mp3` is empty (4 bytes), so a soft synthetic rain is generated instead. Drop in a real file with the same name and re-run `npm run assets`.
+Where only one recording existed for a numbered set (flicker, knock, whisper), the script derives the extra variants by pitch-shifting or reversing it. There is one creak: doors use it, and walls creak now and then when someone walks close by. The main theme is the only music and plays under every screen; there is no rain.
 
 ## Code layout
 
@@ -57,7 +58,7 @@ server/puzzles.js    puzzle state and rules
 server/director.js   the horror director
 server/board.js      evidence board and endings
 public/js/main.js    screens and phase routing
-public/js/game/      the house (house, physics, controls, players, clues, puzzles, director)
+public/js/game/      the house (house, garden, physics, controls, players, clues, puzzles, director)
 public/js/board.js   deduction board
 public/js/ending.js  endings and results
 public/js/data/      the 12 notes, tells and scribbles

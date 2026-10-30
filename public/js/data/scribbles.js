@@ -19,7 +19,7 @@ export const SCRIBBLES = [
   { id: 'warm', text: 'the walls are warm', area: 'hall', pos: [-10, U + 1.5, -6.12], face: '-z', w: 1.6 },
   { id: 'dancer', text: "the dancer won't stop dancing", area: 'nursery', pos: [10, U + 1.7, 2.12], face: '+z', w: 2.4 },
   { id: 'dig', text: "don't dig don't dig don't dig", area: 'conservatory', pos: [6.4, 1.7, -9.88], face: '+z', w: 2.2 },
-  { id: 'hush', text: 'hush, the clock is listening', area: 'dining', pos: [13.88, 1.95, 6], face: '-x', w: 2 },
+  { id: 'hush', text: 'hush, the clock is listening', area: 'dining', pos: [13.88, 1.95, 6], face: '-x', w: 1.7 },
   { id: 'reads', text: 'he reads to me every night', area: 'garden', pos: [-6, 0.515, -24.05], face: 'up', w: 1.7 },
   { id: 'gohome', text: 'go home go home go home', area: 'foyer', pos: [0, 2.75, 9.88], face: '-z', w: 2.2 },
   { id: 'page17', text: 'page 17 is missing', area: 'library', pos: [-4.12, 1.7, 0.9], face: '-x', w: 1.5 },
@@ -30,7 +30,7 @@ export const SCRIBBLES = [
   { id: 'light3', text: 'I can see your light', area: 'cellar', pos: [8, C + 1.6, -9.88], face: '+z', w: 1.5, beam: true },
   // "I write I write I write", small and low, in every room
   ...[
-    ['foyer', 3.3, 0.45, 9.88, '-z'], ['staircase', -3.6, 0.45, -9.88, '+z'], ['drawing', -13.88, 0.45, 9, '+x'],
+    ['foyer', 3.3, 0.45, 9.88, '-z'], ['staircase', -3.6, 0.45, -9.88, '+z'], ['drawing', -13.88, 0.45, 9.5, '+x'],
     ['library', -6, 0.4, 1.88, '-z'], ['study', -5, 0.45, -4.12, '-z'], ['dining', 5, 0.45, 9.88, '-z'],
     ['kitchen', 4.12, 0.45, 0.6, '+x'], ['conservatory', 13.88, 0.45, -5, '-x'], ['hall', 13.88, U + 0.45, -8, '-x'],
     ['master', -6.12, U + 0.45, 1, '-x'], ['bathroom', -13.88, U + 0.45, 3, '+x'], ['bird', 6.12, U + 0.45, 1, '+x'],
