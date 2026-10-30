@@ -223,7 +223,7 @@ export function stopGame() {
   if (modalOpen()) closeModal();
   tickSound?.stop(0.5);
   endGardenDark();
-  gardenDark.next = 0;
+  gardenDark.next = gardenDark.back = 0;
   team?.clear();
   for (const p of pingMarkers.splice(0)) scene.remove(p.obj);
   if (document.pointerLockElement) document.exitPointerLock();
@@ -395,20 +395,24 @@ function updateRoomLights(area, want, dt) {
 
 // ---------------------------------------------------------------------------- The garden takes your light
 
-// Out in the Garden the flashlight now and then dies for 3-5 seconds while your heart pounds.
-// Returns the beam's multiplier: 1 normally, a stutter as it dies, 0 while it is out.
-const gardenDark = { next: 0, start: 0, until: 0, hb: null };
+// Anywhere outdoors (the Garden is everything outside the walls) the flashlight now and then
+// dies for 3-5 seconds while your heart pounds, then sputters back. Returns the beam's
+// multiplier: 1 normally, a stutter as it dies and returns, 0 while it is out.
+const gardenDark = { next: 0, start: 0, until: 0, back: 0, hb: null };
+const stutter = () => (Math.random() < 0.5 ? 0 : 0.3 + Math.random() * 0.7);
 function gardenFlashlight(inGarden) {
   const g = gardenDark, now = performance.now();
   if (g.until) {
-    if (inGarden && now < g.until) return now - g.start < 450 ? (Math.random() < 0.5 ? 0 : 0.3 + Math.random() * 0.7) : 0;
+    if (inGarden && now < g.until) return now - g.start < 600 ? stutter() : 0;
     endGardenDark();
-    if (me.flash) audio.play('flashlight_click', { volume: 0.6 });
-    return 1;
+    if (me.flash && inGarden) g.back = now + 500;
+    return 0;
   }
+  if (now < g.back) return stutter();
   if (!inGarden) { g.next = 0; return 1; }
-  if (!g.next) g.next = now + 8000 + Math.random() * 12000;
-  if (now < g.next || !me.flash) return 1;
+  if (!g.next) g.next = now + 3000 + Math.random() * 5000;
+  if (!me.flash) { g.next = Math.max(g.next, now + 1500 + Math.random() * 2500); return 1; } // soon after you switch it on
+  if (now < g.next) return 1;
   g.start = now;
   g.until = now + 3000 + Math.random() * 2000;
   g.hb = audio.play('heartbeat', { loop: true, volume: 0.9, fadeIn: 0.3 });
@@ -421,7 +425,7 @@ function endGardenDark() {
   g.hb?.stop(1.2);
   g.hb = null;
   g.until = 0;
-  g.next = performance.now() + 15000 + Math.random() * 25000;
+  g.next = performance.now() + 10000 + Math.random() * 15000;
 }
 
 // ---------------------------------------------------------------------------- Footsteps
@@ -489,6 +493,7 @@ function useDoor(d) {
 
 function toggleFlashlight() {
   if (room?.settings.batteryDrain && me.battery <= 0) { caption('[The flashlight is dead. Find a spare battery.]'); return; }
+  if (gardenDark.until && me.flash) { audio.play('flashlight_click', { volume: 0.8 }); caption('[Click. Click. Nothing.]', 1500); return; }
   me.flash = !me.flash;
   audio.play('flashlight_click', { volume: 0.8 });
 }
